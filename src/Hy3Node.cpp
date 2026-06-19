@@ -160,7 +160,15 @@ void Hy3GroupNode::collapseExpansions() {
 }
 
 void Hy3GroupNode::setLayout(Hy3GroupLayout layout) {
-	if (layout == Hy3GroupLayout::Root) return; // root layout is immutable
+	// The root node's layout is immutable: it is the invariant that terminates every
+	// ancestors() walk (is_root() <=> layout == Root). Changing it away from Root makes
+	// ancestors() run off the top of the tree into the root's null parent, where as_group()
+	// throws an uncaught exception across the Lua dispatcher boundary and aborts the
+	// compositor. This is reachable from user dispatchers: `changefocus raise` moves focus
+	// onto the root's child group, after which `changegroup`/`toggletab` resolves the
+	// containing group to the root node and tries to relayout it.
+	if (this->layout == Hy3GroupLayout::Root) return;
+	if (layout == Hy3GroupLayout::Root) return; // no other node may take the root layout
 	this->layout = layout;
 
 	if (!isTab()) {
